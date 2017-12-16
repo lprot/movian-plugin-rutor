@@ -49,7 +49,7 @@
     });
 
 
-    function scraper(page, doc, type) {
+    function scraper(page, doc) {
         // 1-date, 2-filelink, 3-infolink, 4-title, 5-(1)size, (2)seeds, (3)peers
         var re = /<tr class="[gai|tum]+"><td>([\s\S]*?)<\/td>[\s\S]*?href="([\s\S]*?)"[\s\S]*?<a href[\s\S]*?<a href="([\s\S]*?)">([\s\S]*?)<\/a>([\s\S]*?)<\/tr>/g;
         var match = re.exec(doc);
@@ -62,24 +62,37 @@
             var url = service.baseURL + match[2];
             if (match[2].match(/http:\/\//))
                 url = service.baseURL + match[2].match(/(\/download.*)/)[1];
-            var title = new showtime.RichText(colorStr(match[1], orange) + ' ' +
+            page.appendItem('torrent:browse:' + url, 'directory', {
+                title: new showtime.RichText(colorStr(match[1], orange) + ' ' +
                     match[4] + ' ('+ coloredStr(end[2], green) + '/'+
                     coloredStr(end[3], red) + ') ' + colorStr(end[1], blue) +
-                    (comments ? colorStr(comments, orange) : ''));
-            if (type == 'video')
-                page.appendItem('torrent:browse:' + url, type, {
-                    title: title,
-                    icon: logo
-                });
-            else
-                page.appendItem('torrent:browse:' + url, type, {
-                    title: title
-                });
- 
+                    (comments ? colorStr(comments, orange) : ''))
+            }); 
             page.entries++;
             match = re.exec(doc);
         }
     }
+
+    plugin.addURI(plugin.getDescriptor().id + ":browse:(.*):(.*)", function(page, url, title) {
+        setPageHeader(page, plugin.getDescriptor().synopsis + ' / ' + unescape(title));
+        page.loading = true;
+
+	var tryToSearch = true;
+
+	function loader() {
+            if (!tryToSearch) return false;
+            page.loading = true;
+            var doc = showtime.httpReq(service.baseURL + url).toString();
+	    page.loading = false;
+            scraper(page, doc);
+            var more = doc.match(/<a href="([\s\S]*?)"> <b>След.&nbsp;/) 
+	    if (!more) return tryToSearch = false;
+            url = more[1];
+            return true;
+	};
+	loader();
+	page.paginator = loader;
+    });
 
     plugin.addURI(plugin.getDescriptor().id + ":start", function(page) {
         setPageHeader(page, plugin.getDescriptor().synopsis);
@@ -93,7 +106,13 @@
                page.appendItem("", "separator", {
  	           title: new showtime.RichText(match[1])
                });
-               scraper(page, match[2], 'directory');
+               scraper(page, match[2]);
+               var more = match[1].match(/<a href=([\s\S]*?)>([\s\S]*?)<\/a>/);
+               if (more) {
+                   page.appendItem(plugin.getDescriptor().id + ':browse:' + more[1] + ':' + escape(more[2]), 'directory', {
+                       title: 'Больше ►'
+                   });                   
+               }
                match = re.exec(doc[1]);
            }
         }
@@ -109,7 +128,7 @@
             page.loading = true;
 	    var doc = showtime.httpReq(service.baseURL + "/search/"+ fromPage +"/0/000/0/" + query.replace(/\s/g, '\+')).toString();
 	    page.loading = false;
-            scraper(page, doc, 'video');
+            scraper(page, doc);
 	    if (!doc.match(/downgif/)) return tryToSearch = false;
             fromPage++;
 	    return true;
