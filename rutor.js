@@ -46,7 +46,7 @@ function setPageHeader(page, title) {
 
 service.create(plugin.title, plugin.id + ":start", 'video', true, logo);
 
-settings.globalSettings('settings', plugin.title, logo, plugin.synopsis);
+settings.globalSettings(plugin.id, plugin.title, logo, plugin.synopsis);
 settings.createString('baseURL', "Base URL without '/' at the end", 'http://zerkalo-rutor.org', function(v) {
     service.baseURL = v;
 });
