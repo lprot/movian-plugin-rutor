@@ -1,7 +1,7 @@
 /**
  * rutor.org plugin for Movian Media Center
  *
- *  Copyright (C) 2015-2017 lprot
+ *  Copyright (C) 2015-2018 lprot
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -98,7 +98,7 @@ new page.Route(plugin.id + ":browse:(.*):(.*)", function(page, url, title) {
 new page.Route(plugin.id + ":start", function(page) {
     setPageHeader(page, plugin.synopsis);
     page.appendItem(plugin.id + ":search:", 'search', {
-        title: 'Search rutor'
+        title: 'Поиск на ' + service.baseURL
     });
     page.loading = true;
     var doc = http.request(service.baseURL + '/top').toString();
