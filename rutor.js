@@ -1,5 +1,5 @@
 /**
- * rutor.org plugin for Movian Media Center
+ * Rutor plugin for Movian Media Center
  *
  *  Copyright (C) 2015-2018 lprot
  *
@@ -21,11 +21,18 @@ var page = require('showtime/page');
 var service = require('showtime/service');
 var settings = require('showtime/settings');
 var http = require('showtime/http');
-
 var plugin = JSON.parse(Plugin.manifest);
-var logo = Plugin.path + "logo.png";
-var blue = '6699CC', orange = 'FFA500', red = 'EE0000', green = '008B45';
+var logo = Plugin.path + plugin.icon;
 
+RichText = function(x) {
+    this.str = x.toString();
+}
+
+RichText.prototype.toRichString = function(x) {
+    return this.str;
+}
+
+var blue = '6699CC', orange = 'FFA500', red = 'EE0000', green = '008B45';
 function colorStr(str, color) {
     return '<font color="' + color + '"> (' + str + ')</font>';
 }
@@ -47,7 +54,7 @@ function setPageHeader(page, title) {
 service.create(plugin.title, plugin.id + ":start", 'video', true, logo);
 
 settings.globalSettings(plugin.id, plugin.title, logo, plugin.synopsis);
-settings.createString('baseURL', "Base URL without '/' at the end", 'http://zerkalo-rutor.org', function(v) {
+settings.createString('baseURL', "Base URL without '/' at the end", 'http://rutor.info', function(v) {
     service.baseURL = v;
 });
 
@@ -65,7 +72,7 @@ function scraper(page, doc) {
         if (match[2].match(/http:\/\//))
             url = service.baseURL + match[2].match(/(\/download.*)/)[1];
         page.appendItem('torrent:browse:' + url, 'directory', {
-            title: new showtime.RichText(colorStr(match[1], orange) + ' ' +
+            title: new RichText(colorStr(match[1], orange) + ' ' +
                 match[4] + ' ('+ coloredStr(end[2], green) + '/'+
                 coloredStr(end[3], red) + ') ' + colorStr(end[1], blue) +
                 (comments ? colorStr(comments, orange) : ''))
@@ -108,7 +115,7 @@ new page.Route(plugin.id + ":start", function(page) {
         var match = re.exec(doc[1]);
         while (match) {
             page.appendItem("", "separator", {
- 	        title: new showtime.RichText(match[1])
+                title: new RichText(match[1])
             });
             scraper(page, match[2]);
             var more = match[1].match(/<a href=([\s\S]*?)>([\s\S]*?)<\/a>/);

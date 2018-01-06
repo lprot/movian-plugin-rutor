@@ -1,15 +1,15 @@
 {
-	"description": "<p>rutor.org :: Свободный торрент трекер<p>Для дополнительной информации, посетите  <a href=\"http://rutor.org\">http://rutor.org</a>",
+	"description": "<p>Rutor.info :: Свободный торрент трекер<p>Для дополнительной информации, посетите  <a href=\"http://rutor.info\">http://rutor.org</a>",
 	"author": "lprot", 
 	"homepage": "http://github.com/lprot/movian-plugin-rutor",
-	"title": "rutor.org",
-	"synopsis": "rutor.org :: Свободный торрент трекер",
-	"version": "0.2.8",
+	"title": "Rutor",
+	"synopsis": "Rutor.info :: Свободный торрент трекер",
+	"version": "0.2.9",
         "file": "rutor.js",
 	"showtimeVersion": "4.8",
 	"type": "ecmascript",
 	"icon": "logo.png",
 	"id": "rutor",
 	"category": "video",
-        "apiversion": 1
+        "apiversion": 2
 }
