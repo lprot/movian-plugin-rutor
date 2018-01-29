@@ -4,7 +4,7 @@
 	"homepage": "http://github.com/lprot/movian-plugin-rutor",
 	"title": "Rutor",
 	"synopsis": "Rutor.info :: Свободный торрент трекер",
-	"version": "0.2.10",
+	"version": "0.3",
         "file": "rutor.js",
 	"showtimeVersion": "4.8",
 	"type": "ecmascript",

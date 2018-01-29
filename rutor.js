@@ -58,6 +58,60 @@ settings.createString('baseURL', "Base URL without '/' at the end", 'http://ruto
     service.baseURL = v;
 });
 
+new page.Route(plugin.id + ":indexImages:(.*):(.*)", function(page, url, title) {
+    page.model.contents = 'grid';
+    setPageHeader(page, unescape(title));
+    page.loading = true;
+    var doc = http.request(service.baseURL + unescape(url)).toString();
+    try {
+        doc = doc.match(/<table id="details">([\s\S]*?)>Связанные раздачи</)[1];
+        var re = /<img src="([\s\S]*?)"/g;
+        var match = re.exec(doc);
+        while (match) {
+            page.appendItem(match[1], 'image'); 
+            match = re.exec(doc);
+        }
+    } catch(err) {}
+    page.loading = false;
+});
+
+new page.Route(plugin.id + ":indexItem:(.*):(.*):(.*)", function(page, torrentUrl, infoUrl, title) {
+    setPageHeader(page, unescape(title));
+    page.loading = true;
+    var doc = http.request(service.baseURL + unescape(infoUrl)).toString();
+    var icon = description = void(0);
+
+    try {
+        doc = doc.match(/<table id="details">([\s\S]*?)<\/table>/)[1];
+        icon = doc.match(/<img src="([\s\S]*?)"/)[1];
+        var expressions = [/О фильме:[\S\s]*?>([\S\s]*?)<a/, /Описание:[\S\s]*?>([\S\s]*?)<a/, /Описание[\S\s]*?>([\S\s]*?)<a/];
+        for (var i = 0 ; i < expressions.length; i++) {
+            description = doc.match(expressions[i]);
+            if (description) {
+                description = description[1].replace(/<br \/>/g, '');
+
+                break;
+            }
+        }
+    } catch(err) {}
+
+    page.appendItem('torrent:browse:' + unescape(torrentUrl), 'video', {
+        title: unescape(title),
+        icon: icon,
+        description: description ? new RichText(description) : void(0)
+    });
+    if (icon)
+        page.appendItem(plugin.id + ':indexImages:' + infoUrl + ':' + title, 'directory', {
+            title: 'Картинки',
+            icon: icon
+        }); 
+    page.appendItem("", "separator", {
+        title: 'Связанные раздачи'
+    });
+    scraper(page, doc); 
+    page.loading = false;
+});
+
 function scraper(page, doc) {
     // 1-date, 2-filelink, 3-infolink, 4-title, 5-(1)size, (2)seeds, (3)peers
     var re = /<tr class="[gai|tum]+"><td>([\s\S]*?)<\/td>[\s\S]*?href="([\s\S]*?)"[\s\S]*?<a href[\s\S]*?<a href="([\s\S]*?)">([\s\S]*?)<\/a>([\s\S]*?)<\/tr>/g;
@@ -71,7 +125,7 @@ function scraper(page, doc) {
         var url = service.baseURL + match[2];
         if (match[2].match(/http:\/\//))
             url = service.baseURL + match[2].match(/(\/download.*)/)[1];
-        page.appendItem('torrent:browse:' + url, 'directory', {
+        page.appendItem(plugin.id + ':indexItem:' + escape(url) + ':' + escape(match[3]) + ':' + escape(match[4]), 'directory', {
             title: new RichText(colorStr(match[1], orange) + ' ' +
                 match[4] + ' ('+ coloredStr(end[2], green) + '/'+
                 coloredStr(end[3], red) + ') ' + colorStr(end[1], blue) +
@@ -102,14 +156,39 @@ new page.Route(plugin.id + ":browse:(.*):(.*)", function(page, url, title) {
     page.paginator = loader;
 });
 
+var html = 0;
+new page.Route(plugin.id + ":categories", function(page) {
+    setPageHeader(page, plugin.title + ' - Категории');
+    page.loading = true;
+    if (!html) 
+        html = http.request(service.baseURL + '/top').toString();
+    var re = /Самые популярные торренты в категории <a href=([\s\S]*?)>([\s\S]*?)<\/a>/g;
+    var match = re.exec(html);
+    while (match) {
+        var name = match[2].replace(/"/g, '').trim();
+        page.appendItem(plugin.id + ':browse:' + match[1] + ':' + escape(name), 'directory', {
+            title: name
+        });
+        match = re.exec(html);
+    }
+    page.loading = false;
+});
+
 new page.Route(plugin.id + ":start", function(page) {
     setPageHeader(page, plugin.synopsis);
+    page.loading = true;
+
     page.appendItem(plugin.id + ":search:", 'search', {
         title: 'Поиск на ' + service.baseURL
     });
-    page.loading = true;
-    var doc = http.request(service.baseURL + '/top').toString();
-    doc = doc.match(/<div id="index">([\s\S]*?)<!-- bottom banner -->/);
+
+    html = http.request(service.baseURL + '/top').toString();
+
+    page.appendItem(plugin.id + ":categories:", 'directory', {
+        title: 'Категории'
+    });
+
+    var doc = html.match(/<div id="index">([\s\S]*?)<!-- bottom banner -->/);
     if (doc) {
         var re = /<h2>([\s\S]*?)<\/h2>([\s\S]*?)<\/table>/g;
         var match = re.exec(doc[1]);
