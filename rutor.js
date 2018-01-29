@@ -43,7 +43,7 @@ function coloredStr(str, color) {
 
 function setPageHeader(page, title) {
     if (page.metadata) {
-        page.metadata.title = title;
+        page.metadata.title = new RichText(title);
         page.metadata.logo = logo;
     }
     page.type = "directory";
@@ -82,21 +82,20 @@ new page.Route(plugin.id + ":indexItem:(.*):(.*):(.*)", function(page, torrentUr
     var icon = description = void(0);
 
     try {
-        doc = doc.match(/<table id="details">([\s\S]*?)<\/table>/)[1];
-        icon = doc.match(/<img src="([\s\S]*?)"/)[1];
+        var details = doc.match(/<table id="details">([\s\S]*?)<\/table>/)[1];
+        icon = details.match(/<img src="([\s\S]*?)"/)[1];
         var expressions = [/О фильме:[\S\s]*?>([\S\s]*?)<a/, /Описание:[\S\s]*?>([\S\s]*?)<a/, /Описание[\S\s]*?>([\S\s]*?)<a/];
         for (var i = 0 ; i < expressions.length; i++) {
-            description = doc.match(expressions[i]);
+            description = details.match(expressions[i]);
             if (description) {
-                description = description[1].replace(/<br \/>/g, '');
-
+                description = description[1].replace(/<br \/>/g, '').trim();
                 break;
             }
         }
     } catch(err) {}
 
     page.appendItem('torrent:browse:' + unescape(torrentUrl), 'video', {
-        title: unescape(title),
+        title: new RichText(unescape(title)),
         icon: icon,
         description: description ? new RichText(description) : void(0)
     });
@@ -105,14 +104,30 @@ new page.Route(plugin.id + ":indexItem:(.*):(.*):(.*)", function(page, torrentUr
             title: 'Картинки',
             icon: icon
         }); 
-    page.appendItem("", "separator", {
-        title: 'Связанные раздачи'
-    });
-    scraper(page, doc); 
+    scraper(page, details, true);
+
+    //1-nick, 2-date, 3-comment
+    re = /class="c_h"><td><b>([\s\S]*?)<\/b><\/td>[\s\S]*?<td>([\s\S]*?)<\/td>[\s\S]*?class="c_t"[\s\S]*?>([\s\S]*?)<\/td>/g;
+    match = re.exec(doc);
+    var first = true;
+    while (match) {
+        if (first) {
+            page.appendItem("", "separator", {
+                title: 'Комментарии'
+            });
+            first = false;
+        }        
+        page.appendPassiveItem('video', '', {
+            title: new RichText(coloredStr(match[1], orange) + ' ' + match[2]),
+            tagline: match[2],
+            description: new RichText(match[3])
+        });
+        match = re.exec(doc);
+    }
     page.loading = false;
 });
 
-function scraper(page, doc) {
+function scraper(page, doc, section) {
     // 1-date, 2-filelink, 3-infolink, 4-title, 5-(1)size, (2)seeds, (3)peers
     var re = /<tr class="[gai|tum]+"><td>([\s\S]*?)<\/td>[\s\S]*?href="([\s\S]*?)"[\s\S]*?<a href[\s\S]*?<a href="([\s\S]*?)">([\s\S]*?)<\/a>([\s\S]*?)<\/tr>/g;
     var match = re.exec(doc);
@@ -125,6 +140,10 @@ function scraper(page, doc) {
         var url = service.baseURL + match[2];
         if (match[2].match(/http:\/\//))
             url = service.baseURL + match[2].match(/(\/download.*)/)[1];
+        if (section && page.entries == 0)
+            page.appendItem("", "separator", {
+                title: 'Связанные раздачи'
+            });
         page.appendItem(plugin.id + ':indexItem:' + escape(url) + ':' + escape(match[3]) + ':' + escape(match[4]), 'directory', {
             title: new RichText(colorStr(match[1], orange) + ' ' +
                 match[4] + ' ('+ coloredStr(end[2], green) + '/'+
