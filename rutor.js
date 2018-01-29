@@ -64,7 +64,7 @@ new page.Route(plugin.id + ":indexImages:(.*):(.*)", function(page, url, title) 
     page.loading = true;
     var doc = http.request(service.baseURL + unescape(url)).toString();
     try {
-        doc = doc.match(/<table id="details">([\s\S]*?)>Связанные раздачи</)[1];
+        doc = doc.match(/<table id="details">([\s\S]*?)<td class="header">Оценка</)[1];
         var re = /<img src="([\s\S]*?)"/g;
         var match = re.exec(doc);
         while (match) {
@@ -84,7 +84,8 @@ new page.Route(plugin.id + ":indexItem:(.*):(.*):(.*)", function(page, torrentUr
     try {
         var details = doc.match(/<table id="details">([\s\S]*?)<\/table>/)[1];
         icon = details.match(/<img src="([\s\S]*?)"/)[1];
-        var expressions = [/О фильме:[\S\s]*?>([\S\s]*?)<a/, /Описание:[\S\s]*?>([\S\s]*?)<a/, /Описание[\S\s]*?>([\S\s]*?)<a/];
+        var expressions = [/О фильме:[\S\s]*?>([\S\s]*?)<a/, /Описание:[\S\s]*?>([\S\s]*?)<a/, /Описание[\S\s]*?>([\S\s]*?)<a/,
+            /О сериале:[\S\s]*?>([\S\s]*?)<a/, /О фильме[\S\s]*?>([\S\s]*?)<a/, /Содержание:[\S\s]*?>([\S\s]*?)<a/];
         for (var i = 0 ; i < expressions.length; i++) {
             description = details.match(expressions[i]);
             if (description) {
@@ -94,9 +95,29 @@ new page.Route(plugin.id + ":indexItem:(.*):(.*):(.*)", function(page, torrentUr
         }
     } catch(err) {}
 
+    var source = doc.match(/<td class="header">Залил<\/td>[\S\s]*?">([\S\s]*?)<\/a>/);
+    var raiting = doc.match(/<td class="header">Оценка<\/td><td>([\S\s]*?) из/);
+    var screenshots = doc.match(/Скриншоты([\S\s]*?)(<\/textarea>|<td class="header">)/);
+    var backdrops = [];
+    if (screenshots) {
+        re = /<img src="([\s\S]*?)"/g;
+        match = re.exec(screenshots[1]);
+        while (match) {
+            backdrops.push({url: match[1]});
+            match = re.exec(screenshots[1]);
+        }
+    }
     page.appendItem('torrent:browse:' + unescape(torrentUrl), 'video', {
         title: new RichText(unescape(title)),
         icon: icon,
+        backdrops: backdrops,
+        source: source ? new RichText('Добавил: ' + coloredStr(source[1], orange)) : void(0),
+        genre: new RichText(doc.match(/<td class="header">Категория<[\S\s]*?">([\S\s]*?)<\/a>/)[1] +
+            '<br>Раздают: ' + coloredStr(doc.match(/<td class="header">Раздают<\/td><td>([\S\s]*?)<\/td>/)[1], green) +
+            ' Качают: ' + coloredStr(doc.match(/<td class="header">Качают<\/td><td>([\S\s]*?)<\/td>/)[1], red) +
+            '<br>Размер: ' + doc.match(/<td class="header">Размер<\/td><td>([\S\s]*?)<\/td>/)[1]),
+        rating: raiting ? 10 * raiting[1] : void(0),
+        tagline: new RichText(coloredStr('Добавлен: ', orange) + doc.match(/<td class="header">Добавлен<\/td><td>([\S\s]*?)<\/td>/)[1]),
         description: description ? new RichText(description) : void(0)
     });
     if (icon)
@@ -132,9 +153,10 @@ function scraper(page, doc, section) {
     var re = /<tr class="[gai|tum]+"><td>([\s\S]*?)<\/td>[\s\S]*?href="([\s\S]*?)"[\s\S]*?<a href[\s\S]*?<a href="([\s\S]*?)">([\s\S]*?)<\/a>([\s\S]*?)<\/tr>/g;
     var match = re.exec(doc);
     while (match) {
+        var comments = '';
         if (match[5].match(/alt="C"/)) {
             var end = match[5].match(/[\s\S]*?<td align="right">[\s\S]*?<td align="right">([\s\S]*?)<[\s\S]*?nbsp;([\s\S]*?)<\/span>[\s\S]*?nbsp;([\s\S]*?)<\/span>/);
-            var comments = match[5].match(/[\s\S]*?<td align="right">([\s\S]*?)</)[1];
+            comments = match[5].match(/[\s\S]*?<td align="right">([\s\S]*?)</)[1];
         } else
             var end = match[5].match(/[\s\S]*?<td align="right">([\s\S]*?)<[\s\S]*?nbsp;([\s\S]*?)<\/span>[\s\S]*?nbsp;([\s\S]*?)<\/span>/);
         var url = service.baseURL + match[2];
