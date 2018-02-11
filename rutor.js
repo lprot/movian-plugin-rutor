@@ -95,6 +95,7 @@ new page.Route(plugin.id + ":indexItem:(.*):(.*):(.*)", function(page, torrentUr
         }
     } catch(err) {}
 
+    page.metadata.logo = icon;
     var source = doc.match(/<td class="header">Залил<\/td>[\S\s]*?">([\S\s]*?)<\/a>/);
     var raiting = doc.match(/<td class="header">Оценка<\/td><td>([\S\s]*?) из/);
     var screenshots = doc.match(/Скриншоты([\S\s]*?)(<\/textarea>|<td class="header">)/);
