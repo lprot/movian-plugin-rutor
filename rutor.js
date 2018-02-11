@@ -54,7 +54,7 @@ function setPageHeader(page, title) {
 service.create(plugin.title, plugin.id + ":start", 'video', true, logo);
 
 settings.globalSettings(plugin.id, plugin.title, logo, plugin.synopsis);
-settings.createString('baseURL', "Base URL without '/' at the end", 'http://rutor.info', function(v) {
+settings.createString('baseURL', "Base URL without '/' at the end", 'http://rutor.is', function(v) {
     service.baseURL = v;
 });
 
